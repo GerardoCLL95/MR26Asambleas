@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Mario Ruiz Gobernador Regional</title>
+  <meta name="description" content="Panel principal de administración de asambleas MR26." />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div id="page-loader">
+    <img src="images/logo.jpg" alt="MR26" class="loader-logo" />
+    <div class="spinner"></div>
+    <p class="loader-text">Cargando panel...</p>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <div class="admin-layout">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo">
+          <img src="images/logo.jpg" alt="MR26" />
+        </div>
+        <div>
+          <div class="brand-text">Mario Ruiz</div>
+          <div class="brand-sub">Gobernador Regional · Asambleas</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Principal</div>
+        <a href="dashboard.html" class="nav-link active">
+          <span class="icon">🏠</span> Dashboard
+        </a>
+        <a href="asambleas.html" class="nav-link">
+          <span class="icon">📋</span> Asambleas
+        </a>
+        <a href="asistencia.html" class="nav-link">
+          <span class="icon">👥</span> Asistentes
+        </a>
+        <a href="monitor.html" class="nav-link" target="_blank">
+          <span class="icon">📺</span> Monitor Live
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar">A</div>
+          <div>
+            <div class="user-name">Administrador</div>
+            <div class="user-role">MR26</div>
+          </div>
+        </div>
+        <button id="btn-logout">🚪 Cerrar sesión</button>
+      </div>
+    </aside>
+
+    <!-- Overlay mobile -->
+    <div class="sidebar-overlay"></div>
+
+    <!-- ── MAIN CONTENT ── -->
+    <main class="main-content">
+
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-menu" id="btn-menu">☰</button>
+          <div>
+            <div class="topbar-title">Dashboard</div>
+          </div>
+        </div>
+        <span style="font-size:12px; color:var(--text-muted);" id="topbar-date"></span>
+      </header>
+
+      <!-- Page Body -->
+      <div class="page-body">
+
+        <!-- Welcome Banner -->
+        <div style="background:linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%); border-radius:var(--radius-lg); padding:24px 28px; margin-bottom:28px; display:flex; align-items:center; gap:20px; box-shadow:var(--shadow-navy); overflow:hidden; position:relative;">
+          <div style="position:absolute; right:-20px; top:-20px; width:160px; height:160px; border-radius:50%; border:40px solid rgba(255,255,255,0.06);"></div>
+        <div style="background:#fff; border-radius:12px; padding:8px 12px; flex-shrink:0; position:relative; z-index:1; box-shadow:0 4px 16px rgba(0,0,0,0.2);">
+          <img src="images/logo.jpg" alt="MR26" style="width:60px; height:auto; object-fit:contain; display:block;" />
+        </div>
+          <div style="position:relative; z-index:1;">
+            <div style="font-size:20px; font-weight:800; color:#fff;">¡Bienvenido al Sistema de Asambleas!</div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.7); margin-top:4px;">Mario Ruiz Gobernador Regional · Gestiona asambleas, genera QR y registra asistentes.</div>
+          </div>
+          <div style="margin-left:auto; position:relative; z-index:1;">
+            <a href="asambleas.html" class="btn btn-red">➕ Nueva asamblea</a>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon navy">📋</div>
+            <div>
+              <div class="stat-value" id="stat-asambleas">—</div>
+              <div class="stat-label">Total Asambleas</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">👥</div>
+            <div>
+              <div class="stat-value" id="stat-asistentes">—</div>
+              <div class="stat-label">Total Asistentes</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">✅</div>
+            <div>
+              <div class="stat-value" id="stat-activas">—</div>
+              <div class="stat-label">Asambleas Activas</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon amber">📅</div>
+            <div>
+              <div class="stat-value" id="stat-hoy">—</div>
+              <div class="stat-label">Registros Hoy</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Grid: Últimos registros + Barras por asamblea -->
+        <div class="section-grid">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Últimos Registros</div>
+              <a href="asistencia.html" class="btn btn-outline btn-sm">Ver todos</a>
+            </div>
+            <div id="recent-list">
+              <p class="text-muted text-center mt-16">Cargando...</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Asistentes por Asamblea</div>
+            </div>
+            <div class="asamblea-bar-list" id="asamblea-bars">
+              <p class="text-muted text-center mt-16">Cargando...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accesos rápidos -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Accesos Rápidos</div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;">
+            <a href="asambleas.html" style="text-decoration:none;">
+              <div style="background:var(--navy-soft); border:1px solid var(--navy); border-radius:var(--radius); padding:20px; text-align:center; cursor:pointer; transition:all var(--transition);" onmouseover="this.style.background='var(--navy)'; this.querySelector('.qa-text').style.color='#fff'; this.querySelector('.qa-icon').style.color='#fff';" onmouseout="this.style.background='var(--navy-soft)'; this.querySelector('.qa-text').style.color='var(--navy)'; this.querySelector('.qa-icon').style.color='var(--navy)';">
+                <div class="qa-icon" style="font-size:32px; color:var(--navy);">📋</div>
+                <div class="qa-text" style="font-size:14px; font-weight:700; color:var(--navy); margin-top:8px;">Gestionar Asambleas</div>
+              </div>
+            </a>
+            <a href="asistencia.html" style="text-decoration:none;">
+              <div style="background:var(--red-soft); border:1px solid var(--red); border-radius:var(--radius); padding:20px; text-align:center; cursor:pointer; transition:all var(--transition);" onmouseover="this.style.background='var(--red)'; this.querySelector('.qa-text2').style.color='#fff'; this.querySelector('.qa-icon2').style.color='#fff';" onmouseout="this.style.background='var(--red-soft)'; this.querySelector('.qa-text2').style.color='var(--red)'; this.querySelector('.qa-icon2').style.color='var(--red)';">
+                <div class="qa-icon2" style="font-size:32px; color:var(--red);">👥</div>
+                <div class="qa-text2" style="font-size:14px; font-weight:700; color:var(--red); margin-top:8px;">Ver Asistentes</div>
+              </div>
+            </a>
+            <a href="monitor.html" target="_blank" style="text-decoration:none;">
+              <div style="background:var(--success-soft); border:1px solid var(--success); border-radius:var(--radius); padding:20px; text-align:center; cursor:pointer; transition:all var(--transition);" onmouseover="this.style.background='var(--success)'; this.querySelector('.qa-text3').style.color='#fff'; this.querySelector('.qa-icon3').style.color='#fff';" onmouseout="this.style.background='var(--success-soft)'; this.querySelector('.qa-text3').style.color='var(--success)'; this.querySelector('.qa-icon3').style.color='var(--success)';">
+                <div class="qa-icon3" style="font-size:32px; color:var(--success);">📺</div>
+                <div class="qa-text3" style="font-size:14px; font-weight:700; color:var(--success); margin-top:8px;">Monitor en Vivo</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+      </div><!-- /page-body -->
+    </main>
+  </div>
+
+  <script type="module" src="js/dashboard.js"></script>
+  <script>
+    // Mostrar fecha actual en topbar
+    const el = document.getElementById('topbar-date');
+    if (el) el.textContent = new Date().toLocaleDateString('es-PE', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  </script>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro de Asistencia — Mario Ruiz Gobernador Regional</title>
+  <meta name="description" content="Registra tu asistencia a la asamblea de Mario Ruiz MR26 escaneando el código QR." />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div id="page-loader">
+    <img src="images/logo.jpg" alt="MR26" class="loader-logo" />
+    <div class="spinner"></div>
+    <p class="loader-text">Verificando asamblea...</p>
+  </div>
+
+  <div class="registro-page">
+
+    <!-- Banner Superior -->
+    <div class="registro-banner">
+      <img src="images/logo.jpg" alt="Mario Ruiz" class="registro-banner-logo" />
+      <div class="registro-banner-text">
+        <div class="registro-banner-title">Mario Ruiz &mdash; Gobernador Regional</div>
+        <div class="registro-banner-sub">Sistema de Asambleas</div>
+      </div>
+      <img src="images/mr.png" alt="Mario Ruiz" style="height:120px; width:auto; object-fit:contain; margin-left:auto; position:relative; z-index:1; filter:drop-shadow(0 4px 16px rgba(0,0,0,0.4));" />
+    </div>
+
+    <!-- Estado: Error -->
+    <div id="error-state" style="display:none; width:100%; max-width:480px; padding:0 16px; margin-top:32px;">
+      <div class="registro-card">
+        <div class="error-screen">
+          <div class="error-icon">⚠️</div>
+          <div class="error-title" id="error-title">Asamblea no encontrada</div>
+          <div class="error-sub"  id="error-sub">Esta asamblea no existe o no está disponible.</div>
+          <div style="margin-top:24px;">
+            <img src="images/logo.jpg" alt="MR26" style="width:48px; opacity:0.4;" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estado: Cargando (sin JS) -->
+    <div id="loading-state" style="display:none;"></div>
+
+    <!-- Badge Nombre Asamblea -->
+    <div id="asamblea-badge" class="registro-asamblea-badge" style="display:none;">
+      <div class="registro-asamblea-name asamblea-name">—</div>
+      <div class="registro-fecha" id="asamblea-fecha"></div>
+    </div>
+
+    <!-- Estado: Formulario -->
+    <div id="form-state" style="display:none; width:100%; max-width:500px; padding:0 16px;">
+      <div class="registro-card">
+
+        <!-- Error general -->
+        <div id="form-general-error"></div>
+
+        <!-- Pantalla de éxito (dentro de la card) -->
+        <div class="success-screen" id="success-state">
+          <div class="success-icon">✅</div>
+          <div class="success-title">¡Asistencia registrada!</div>
+          <p class="success-sub">
+            <span class="success-name" id="success-name"></span><br/>
+            Tu asistencia ha sido registrada exitosamente.<br/>
+            Gracias por participar.
+          </p>
+          <div style="margin-top:20px;">
+            <img src="images/logo.jpg" alt="MR26" style="width:56px; margin-bottom:12px;" />
+            <br/>
+            <button id="btn-otro" class="btn btn-primary">
+              ➕ Registrar otro asistente
+            </button>
+          </div>
+        </div>
+
+        <!-- Formulario de registro -->
+        <div id="registro-form-inner">
+          <div class="registro-section-title">Datos personales</div>
+
+          <form id="form-registro" onsubmit="return false;">
+            <!-- Nombres -->
+            <div class="form-group">
+              <label class="form-label" for="input-nombres">
+                Nombres y Apellidos <span class="req">*</span>
+              </label>
+              <input
+                id="input-nombres"
+                type="text"
+                class="form-control"
+                placeholder="Ej: Juan Carlos Pérez García"
+                maxlength="120"
+                autocomplete="name"
+              />
+              <div class="form-error" id="error-nombres"></div>
+            </div>
+
+            <!-- DNI -->
+            <div class="form-group">
+              <label class="form-label" for="input-dni">
+                DNI <span class="req">*</span>
+              </label>
+              <input
+                id="input-dni"
+                type="tel"
+                class="form-control"
+                placeholder="12345678"
+                maxlength="8"
+                inputmode="numeric"
+                pattern="[0-9]{8}"
+              />
+              <div class="form-error" id="error-dni"></div>
+            </div>
+
+            <!-- Celular -->
+            <div class="form-group">
+              <label class="form-label" for="input-celular">
+                Celular <span class="req">*</span>
+              </label>
+              <input
+                id="input-celular"
+                type="tel"
+                class="form-control"
+                placeholder="987654321"
+                maxlength="15"
+                inputmode="numeric"
+              />
+              <div class="form-error" id="error-celular"></div>
+            </div>
+
+            <div style="height:1px; background:var(--border); margin:20px 0;"></div>
+            <div class="registro-section-title">Datos adicionales</div>
+
+            <!-- Base / Dirección -->
+            <div class="form-group">
+              <label class="form-label" for="input-base">
+                Nombre de la Base y/o Dirección <span class="req">*</span>
+              </label>
+              <input
+                id="input-base"
+                type="text"
+                class="form-control"
+                placeholder="Ej: Base Los Olivos / Jr. Puno 123"
+                maxlength="200"
+              />
+              <div class="form-error" id="error-base"></div>
+            </div>
+
+            <!-- Observación -->
+            <div class="form-group">
+              <label class="form-label" for="input-obs">
+                Observación <span style="color:var(--text-muted); font-weight:400;">(opcional)</span>
+              </label>
+              <textarea
+                id="input-obs"
+                class="form-control"
+                placeholder="Información adicional..."
+                maxlength="300"
+              ></textarea>
+            </div>
+
+            <!-- Botón registrar -->
+            <button id="btn-registrar" type="submit" class="btn btn-primary w-full btn-lg">
+              ✅ Registrar asistencia
+            </button>
+
+            <p style="text-align:center; font-size:11px; color:var(--text-muted); margin-top:12px;">
+              Al registrarte confirmas tu participación en esta asamblea.<br/>
+              <strong style="color:var(--navy);">MR26 · Mario Ruiz</strong>
+            </p>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align:center; margin-top:20px; padding-bottom:20px;">
+        <img src="images/logo.jpg" alt="MR26" style="width:36px; opacity:0.5;" />
+        <p style="font-size:11px; color:var(--text-muted); margin-top:6px;">
+          Sistema de Asambleas · Mario Ruiz Gobernador Regional
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /registro-page -->
+
+  <script type="module">
+    import { initRegistro } from './js/registro.js';
+
+    // Mostrar badge de asamblea cuando se carga
+    window.showAsambleaBadge = function() {
+      document.getElementById('asamblea-badge')?.style.setProperty('display','block');
+    };
+  </script>
+
+  <script type="module" src="js/registro.js"></script>
+
+  <script type="module">
+    // Ajustar: mostrar el badge cuando el form-state sea visible
+    import { db } from './js/firebase-config.js';
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+    const params = new URLSearchParams(window.location.search);
+    const asambleaId = params.get('id');
+    if (asambleaId) {
+      const badge = document.getElementById('asamblea-badge');
+      if (badge) badge.style.display = 'block';
+    }
+
+    // Botón "Registrar otro" resetea form y oculta success
+    document.getElementById('btn-otro')?.addEventListener('click', () => {
+      document.getElementById('success-state').classList.remove('show');
+      document.getElementById('success-state').style.display = 'none';
+      document.getElementById('registro-form-inner').style.display = 'block';
+      document.getElementById('form-registro')?.reset();
+    });
+  </script>
+</body>
+</html>

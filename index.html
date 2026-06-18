@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mario Ruiz Gobernador Regional — Sistema de Asambleas</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .redirect-page {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      background: #fff;
+    }
+    .redirect-inner { text-align: center; }
+    .redirect-inner img { width: 80px; margin-bottom: 16px; }
+    .redirect-inner p { color: var(--text-muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="redirect-page">
+    <div class="redirect-inner">
+      <img src="images/logo.jpg" alt="Mario Ruiz" />
+      <div class="spinner" style="margin: 16px auto;"></div>
+      <p>Redirigiendo...</p>
+    </div>
+  </div>
+  <script>
+    // Redirigir al login
+    window.location.replace('login.html');
+  </script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asambleas — Mario Ruiz Gobernador Regional</title>
+  <meta name="description" content="Gestión de asambleas: crear, editar, activar y generar códigos QR." />
+  <link rel="stylesheet" href="css/styles.css" />
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div id="page-loader">
+    <img src="images/logo.jpg" alt="MR26" class="loader-logo" />
+    <div class="spinner"></div>
+    <p class="loader-text">Cargando asambleas...</p>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast-container"></div>
+
+  <div class="admin-layout">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo"><img src="images/logo.jpg" alt="MR26" /></div>
+        <div>
+          <div class="brand-text">Mario Ruiz</div>
+          <div class="brand-sub">Gobernador Regional · Asambleas</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Principal</div>
+        <a href="dashboard.html" class="nav-link"><span class="icon">🏠</span> Dashboard</a>
+        <a href="asambleas.html" class="nav-link active"><span class="icon">📋</span> Asambleas</a>
+        <a href="asistencia.html" class="nav-link"><span class="icon">👥</span> Asistentes</a>
+        <a href="monitor.html" class="nav-link" target="_blank"><span class="icon">📺</span> Monitor Live</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar">A</div>
+          <div>
+            <div class="user-name">Administrador</div>
+            <div class="user-role">MR26</div>
+          </div>
+        </div>
+        <button id="btn-logout">🚪 Cerrar sesión</button>
+      </div>
+    </aside>
+    <div class="sidebar-overlay"></div>
+
+    <!-- ── MAIN ── -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-menu" id="btn-menu">☰</button>
+          <div class="topbar-title">Asambleas</div>
+        </div>
+        <button id="btn-nueva-asamblea" class="btn btn-primary">
+          ➕ Nueva asamblea
+        </button>
+      </header>
+
+      <div class="page-body">
+
+        <div class="page-title-bar">
+          <div>
+            <h1 class="page-title">Gestión de Asambleas</h1>
+            <div class="page-subtitle">
+              <span id="count-asambleas">0</span> asambleas registradas
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nombre</th>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-asambleas">
+                <tr class="empty-row">
+                  <td colspan="5">Cargando asambleas...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ════════════════════════════════════
+       MODAL: Crear / Editar Asamblea
+  ════════════════════════════════════ -->
+  <div id="modal-form" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="form-modal-title">Nueva Asamblea</span>
+        <button class="modal-close" data-close-modal="modal-form">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-asamblea" onsubmit="return false;">
+          <div class="form-group">
+            <label class="form-label" for="input-nombre">
+              Nombre de la asamblea <span class="req">*</span>
+            </label>
+            <input id="input-nombre" type="text" class="form-control"
+              placeholder="Ej: Asamblea Distrital Lima Norte" maxlength="120" />
+            <div class="form-error" id="error-nombre"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-fecha">
+              Fecha <span class="req">*</span>
+            </label>
+            <input id="input-fecha" type="date" class="form-control" />
+            <div class="form-error" id="error-fecha"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-estado">Estado</label>
+            <select id="input-estado" class="form-control">
+              <option value="activa">✅ Activa</option>
+              <option value="inactiva">⏸️ Inactiva</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close-modal="modal-form">Cancelar</button>
+        <button id="btn-save-asamblea" class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       MODAL: Ver QR
+  ════════════════════════════════════ -->
+  <div id="modal-qr" class="modal-backdrop">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <span class="modal-title" id="qr-modal-title">Código QR</span>
+        <button class="modal-close" data-close-modal="modal-qr">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="qr-container">
+          <!-- QR generado aquí -->
+          <div id="qr-display"></div>
+          <div class="qr-url" id="qr-url-text"></div>
+          <div class="qr-actions">
+            <button class="btn btn-primary" onclick="downloadQRBtn()">
+              ⬇️ Descargar PNG
+            </button>
+            <button class="btn btn-outline" onclick="copyLink()">
+              📋 Copiar enlace
+            </button>
+          </div>
+          <!-- Campo oculto con el enlace -->
+          <input type="text" id="qr-link" style="position:absolute; opacity:0; pointer-events:none;" readonly />
+        </div>
+        <div style="background:var(--navy-soft); border:1px solid var(--navy); border-radius:var(--radius); padding:14px 16px; font-size:13px; color:var(--navy); margin-top:8px;">
+          <strong>ℹ️ Instrucciones:</strong> Comparte este QR con los asistentes. Al escanearlo con su celular accederán al formulario de registro.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close-modal="modal-qr">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       MODAL: Confirmar Eliminación
+  ════════════════════════════════════ -->
+  <div id="modal-confirm" class="modal-backdrop">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <span class="modal-title">Confirmar eliminación</span>
+        <button class="modal-close" data-close-modal="modal-confirm">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="confirm-dialog">
+          <div class="confirm-icon">🗑️</div>
+          <div class="confirm-title">¿Eliminar asamblea?</div>
+          <div class="confirm-text">
+            Esta acción no se puede deshacer.<br/>
+            Se eliminará: <span class="confirm-highlight" id="delete-nombre"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close-modal="modal-confirm">Cancelar</button>
+        <button id="btn-confirm-delete" class="btn btn-danger">Sí, eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/asambleas.js"></script>
+</body>
+</html>

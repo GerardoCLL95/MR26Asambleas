@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar Sesión — Mario Ruiz Gobernador Regional</title>
+  <meta name="description" content="Panel de administración de asambleas MR26. Inicia sesión para gestionar asambleas y asistencias." />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div id="page-loader">
+    <img src="images/logo.jpg" alt="MR26" class="loader-logo" />
+    <div class="spinner"></div>
+    <p class="loader-text" id="loader-msg">Conectando...</p>
+  </div>
+
+  <!-- Timeout de seguridad: si Firebase tarda más de 5s, ocultar loader igualmente -->
+  <script>
+    function hideLoader() {
+      const l = document.getElementById('page-loader');
+      if (l) { l.classList.add('hidden'); setTimeout(function(){ if(l.parentNode) l.parentNode.removeChild(l); }, 300); }
+    }
+    // Si en 5 segundos Firebase no respondió, mostrar el formulario de todas formas
+    var _loaderTimeout = setTimeout(function() {
+      var msg = document.getElementById('loader-msg');
+      if (msg) msg.textContent = 'Sin respuesta de Firebase...';
+      setTimeout(hideLoader, 800);
+    }, 5000);
+    // Esta función la llamará el módulo cuando Firebase responda
+    window._firebaseReady = function() {
+      clearTimeout(_loaderTimeout);
+      hideLoader();
+    };
+  </script>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <div class="login-page">
+
+    <!-- Lado Izquierdo: Visual / Branding -->
+    <div class="login-left">
+
+      <!-- Contenido superior: logo + textos -->
+      <div class="login-left-top">
+        <!-- Logo sobre fondo blanco para que destaque en azul oscuro -->
+        <div class="login-hero-logo-wrap">
+          <img src="images/logo.jpg" alt="Mario Ruiz Logo" class="login-hero-logo" />
+        </div>
+        <h1 class="login-hero-title">Mario Ruiz<br/>Gobernador Regional</h1>
+        <p class="login-hero-sub">Sistema de Asambleas</p>
+        <div class="login-hero-stripe"></div>
+      </div>
+
+      <!-- Foto del candidato anclada al fondo del panel (parado en el suelo) -->
+      <img src="images/mr.png" alt="Mario Ruiz" class="login-hero-photo" />
+
+    </div>
+
+    <!-- Lado Derecho: Formulario de Login -->
+    <div class="login-right">
+      <img src="images/logo.jpg" alt="MR26" class="login-form-logo" />
+      <h2 class="login-form-title">Bienvenido</h2>
+      <p class="login-form-sub">Ingresa tus credenciales de administrador</p>
+
+      <div class="login-form-box">
+        <!-- Error general -->
+        <div id="login-error" style="display:none; background:var(--red-soft); border:1px solid var(--red); color:var(--red); border-radius:var(--radius); padding:10px 14px; font-size:13px; font-weight:500; margin-bottom:16px;"></div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label" for="input-email">
+            Correo electrónico <span class="req">*</span>
+          </label>
+          <input
+            id="input-email"
+            type="email"
+            class="form-control"
+            placeholder="admin@correo.com"
+            autocomplete="email"
+            required
+          />
+          <div class="form-error" id="error-email"></div>
+        </div>
+
+        <!-- Contraseña -->
+        <div class="form-group">
+          <label class="form-label" for="input-password">
+            Contraseña <span class="req">*</span>
+          </label>
+          <input
+            id="input-password"
+            type="password"
+            class="form-control"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+          <div class="form-error" id="error-password"></div>
+        </div>
+
+        <!-- Botón ingresar -->
+        <button id="btn-login" class="btn btn-primary w-full btn-lg" style="margin-top:8px;">
+          🔐 Ingresar al sistema
+        </button>
+
+        <div class="login-divider">Acceso solo para administradores</div>
+
+        <div style="text-align:center; font-size:12px; color:var(--text-muted);">
+          Campaña Mario Ruiz · MR26 ·
+          <span style="color:var(--red); font-weight:700;">#MarioRuiz26</span>
+        </div>
+      </div>
+
+      <div class="login-stripe">
+        <span class="s1"></span>
+        <span class="s2"></span>
+        <span class="s3"></span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // ── Importar Firebase con manejo de errores ──
+    let auth, loginWithEmail, onAuthStateChanged;
+
+    try {
+      const configMod = await import('./js/firebase-config.js');
+      const authMod   = await import('./js/auth.js');
+      const fbAuth    = await import('https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js');
+
+      auth              = configMod.auth;
+      loginWithEmail    = authMod.loginWithEmail;
+      onAuthStateChanged = fbAuth.onAuthStateChanged;
+
+      // Firebase cargó correctamente: verificar sesión activa
+      onAuthStateChanged(auth, (user) => {
+        window._firebaseReady(); // cancelar timeout de seguridad
+        if (user) {
+          window.location.href = 'dashboard.html';
+        }
+      });
+
+    } catch (err) {
+      // Error al cargar Firebase (sin internet, CORS por file://, etc.)
+      console.warn('Firebase no pudo inicializarse:', err);
+      const errEl = document.getElementById('login-error');
+      if (errEl) {
+        errEl.textContent = '⚠️ Sin conexión a Firebase. Verifica tu internet.';
+        errEl.style.display = 'block';
+      }
+      window._firebaseReady(); // ocultar loader de todas formas
+    }
+
+    // ── Toast ──
+    function showToast(msg, type = 'info') {
+      const c = document.getElementById('toast-container');
+      const icons = { success:'✅', error:'❌', warning:'⚠️', info:'ℹ️' };
+      const t = document.createElement('div');
+      t.className = `toast ${type}`;
+      t.innerHTML = `<span class="toast-icon">${icons[type]}</span><span class="toast-msg">${msg}</span><button class="toast-close" onclick="this.closest('.toast').remove()">✕</button>`;
+      c.appendChild(t);
+      setTimeout(() => { t.classList.add('removing'); setTimeout(() => t.remove(), 300); }, 4000);
+    }
+
+    function setLoading(loading) {
+      const btn = document.getElementById('btn-login');
+      if (!btn) return;
+      btn.disabled = loading;
+      btn.innerHTML = loading
+        ? '<span class="spinner-sm"></span> Ingresando...'
+        : '🔐 Ingresar al sistema';
+    }
+
+    function clearErrors() {
+      const errEl = document.getElementById('login-error');
+      if (errEl) errEl.style.display = 'none';
+      document.querySelectorAll('.form-control').forEach(el => el.classList.remove('is-invalid'));
+      document.querySelectorAll('.form-error').forEach(el => el.classList.remove('show'));
+    }
+
+    function showFieldError(id, errId, msg) {
+      document.getElementById(id)?.classList.add('is-invalid');
+      const e = document.getElementById(errId);
+      if (e) { e.textContent = msg; e.classList.add('show'); }
+    }
+
+    // ── Manejar login ──
+    document.getElementById('btn-login').addEventListener('click', async () => {
+      clearErrors();
+      const email    = document.getElementById('input-email').value.trim();
+      const password = document.getElementById('input-password').value;
+
+      let valid = true;
+      if (!email)    { showFieldError('input-email','error-email','El correo es obligatorio'); valid = false; }
+      if (!password) { showFieldError('input-password','error-password','La contraseña es obligatoria'); valid = false; }
+      if (!valid) return;
+
+      if (!loginWithEmail) {
+        showToast('Firebase no disponible. Verifica tu conexión.', 'error');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        await loginWithEmail(email, password);
+        showToast('Bienvenido. Redirigiendo...', 'success');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+      } catch (e) {
+        let msg = 'Error al iniciar sesión. Verifica tus credenciales.';
+        if (['auth/user-not-found','auth/wrong-password','auth/invalid-credential'].includes(e.code)) {
+          msg = 'Correo o contraseña incorrectos.';
+        } else if (e.code === 'auth/too-many-requests') {
+          msg = 'Demasiados intentos. Intenta más tarde.';
+        } else if (e.code === 'auth/network-request-failed') {
+          msg = 'Error de conexión. Verifica tu internet.';
+        }
+        const errEl = document.getElementById('login-error');
+        if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+        showToast(msg, 'error');
+        setLoading(false);
+      }
+    });
+
+    // ── Enter para enviar ──
+    ['input-email','input-password'].forEach(id => {
+      document.getElementById(id)?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('btn-login').click();
+      });
+    });
+  </script>
+</body>
+</html>
