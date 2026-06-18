@@ -94,8 +94,7 @@ function listenAsamblea(asambleaId) {
 
   const q = query(
     colAsistencias,
-    where('asambleaId', '==', asambleaId),
-    orderBy('fechaRegistro', 'desc')
+    where('asambleaId', '==', asambleaId)
   );
 
   unsubscribe = onSnapshot(q, (snap) => {
@@ -109,6 +108,13 @@ function listenAsamblea(asambleaId) {
         newEntryIds.add(doc.id);
         setTimeout(() => newEntryIds.delete(doc.id), 5000);
       }
+    });
+
+    // Ordenar en memoria para no requerir índice compuesto en Firestore
+    asistencias.sort((a, b) => {
+      const tA = a.fechaRegistro?.seconds || (a.fechaRegistro?.toDate ? a.fechaRegistro.toDate().getTime() : 0) || 0;
+      const tB = b.fechaRegistro?.seconds || (b.fechaRegistro?.toDate ? b.fechaRegistro.toDate().getTime() : 0) || 0;
+      return tB - tA;
     });
 
     renderFeed();

@@ -162,13 +162,20 @@ function volverAGrid() {
 function listenAsistencias(asambleaId) {
   const q = query(
     colAsistencias,
-    where('asambleaId', '==', asambleaId),
-    orderBy('fechaRegistro', 'desc')
+    where('asambleaId', '==', asambleaId)
   );
 
   unsubscribe = onSnapshot(q, (snap) => {
     asistenciasActual = [];
     snap.forEach(doc => asistenciasActual.push({ id: doc.id, ...doc.data() }));
+    
+    // Ordenar en memoria para no requerir índice compuesto en Firestore
+    asistenciasActual.sort((a, b) => {
+      const tA = a.fechaRegistro?.seconds || (a.fechaRegistro?.toDate ? a.fechaRegistro.toDate().getTime() : 0) || 0;
+      const tB = b.fechaRegistro?.seconds || (b.fechaRegistro?.toDate ? b.fechaRegistro.toDate().getTime() : 0) || 0;
+      return tB - tA;
+    });
+    
     renderTabla();
   }, (err) => {
     showToast('Error al cargar asistentes', 'error');
