@@ -10,6 +10,8 @@ import { requireAuth, setupLogout, setupSidebar } from './auth.js';
 import { exportToXLSX } from './export.js';
 import {
   collection,
+  doc,
+  updateDoc,
   onSnapshot,
   query,
   orderBy,
@@ -208,12 +210,37 @@ function renderTabla() {
     const msg = asistenciasActual.length === 0
       ? 'No hay asistentes registrados en esta asamblea aún.'
       : 'No se encontraron resultados para la búsqueda.';
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${msg}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${msg}</td></tr>`;
     return;
   }
 
   tbody.innerHTML = data.map((a, i) => {
     const { fecha, hora } = formatDateTime(a.fechaRegistro);
+    
+    let presencialBtn = '';
+    if (a.verificado === true) {
+      // Estado: Presente
+      presencialBtn = `
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+          <span class="badge badge-success" style="font-size:11px; font-weight:700;">✓ Presente</span>
+          <button class="btn btn-outline btn-xs" style="padding:2px 6px; font-size:10px;" title="Volver a pendiente" onclick="toggleCheckIn('${a.id}', null)">Rectificar</button>
+        </div>`;
+    } else if (a.verificado === false) {
+      // Estado: Ausente (No asistió)
+      presencialBtn = `
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+          <span class="badge badge-danger" style="font-size:11px; font-weight:700;">✕ Ausente</span>
+          <button class="btn btn-outline btn-xs" style="padding:2px 6px; font-size:10px;" title="Volver a pendiente" onclick="toggleCheckIn('${a.id}', null)">Rectificar</button>
+        </div>`;
+    } else {
+      // Estado: Pendiente
+      presencialBtn = `
+        <div style="display:flex; align-items:center; justify-content:center; gap:6px;">
+          <button class="btn btn-success btn-xs" style="padding:4px 8px; font-size:11px; font-weight:700;" onclick="toggleCheckIn('${a.id}', true)">✓ Asistió</button>
+          <button class="btn btn-danger btn-xs" style="padding:4px 8px; font-size:11px; font-weight:700;" onclick="toggleCheckIn('${a.id}', false)">✕ No asistió</button>
+        </div>`;
+    }
+
     return `
       <tr>
         <td>${i + 1}</td>
@@ -224,21 +251,41 @@ function renderTabla() {
         <td class="text-muted">${escapeHTML(a.observacion) || '—'}</td>
         <td>${fecha}</td>
         <td>${hora}</td>
+        <td>${presencialBtn}</td>
       </tr>
     `;
   }).join('');
 }
 
+// ── Confirmar check-in presencial ──
+window.toggleCheckIn = async function(asistenciaId, nuevoEstado) {
+  try {
+    await updateDoc(doc(db, 'asistencias', asistenciaId), {
+      verificado: nuevoEstado
+    });
+    
+    let msg = 'Asistente puesto en Pendiente';
+    if (nuevoEstado === true) msg = 'Asistencia física confirmada (Presente)';
+    if (nuevoEstado === false) msg = 'Marcado como no asistió (Ausente)';
+    
+    showToast(msg, 'success');
+  } catch (err) {
+    showToast('Error al actualizar verificación', 'error');
+    console.error(err);
+  }
+};
+
 // ── Exportar XLSX de la asamblea actual ──
 function exportar() {
   if (!asambleaActual) return;
-  const data = getFiltered();
+  // Solo exportar los registros que han sido verificados físicamente (verificado === true)
+  const data = getFiltered().filter(a => a.verificado === true);
   if (data.length === 0) {
-    showToast('No hay asistentes para exportar', 'warning');
+    showToast('No hay asistentes confirmados (Presente) para exportar', 'warning');
     return;
   }
   exportToXLSX(data, asambleaActual.nombre, asambleaActual.fecha);
-  showToast(`Exportando ${data.length} asistentes...`, 'info');
+  showToast(`Exportando ${data.length} asistentes confirmados...`, 'info');
 }
 
 // ── Añadir estilos de las tarjetas de asamblea ──
