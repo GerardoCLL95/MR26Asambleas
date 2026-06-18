@@ -21,8 +21,17 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-// ── URL base del proyecto para QR ──
-const BASE_URL = 'https://gerardocll95.github.io/MR26Asambleas/registro.html?id=';
+// ── URL base del proyecto para QR (detectado dinámicamente) ──
+const getBaseUrl = () => {
+  const origin = window.location.origin;
+  let pathname = window.location.pathname;
+  if (pathname.includes('/')) {
+    pathname = pathname.substring(0, pathname.lastIndexOf('/')) + '/registro.html?id=';
+  } else {
+    pathname = '/registro.html?id=';
+  }
+  return origin + pathname;
+};
 
 // ── Colección ──
 const colAsambleas = collection(db, 'asambleas');
@@ -130,7 +139,7 @@ function updateCounter() {
 
 // ── Abrir modal QR ──
 window.openQRModal = function(id, nombre) {
-  const url = BASE_URL + id;
+  const url = getBaseUrl() + id;
   document.getElementById('qr-modal-title').textContent = `QR: ${nombre}`;
   document.getElementById('qr-link').value = url;
   // Limpiar QR anterior y generar nuevo
