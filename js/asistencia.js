@@ -11,12 +11,14 @@ import { exportToXLSX } from './export.js';
 import {
   collection,
   doc,
+  addDoc,
   updateDoc,
   onSnapshot,
   query,
   orderBy,
   where,
-  getDocs
+  getDocs,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 // ── Colecciones ──
@@ -30,6 +32,8 @@ let asambleaActual    = null; // objeto asamblea seleccionada
 let unsubscribe       = null; // para cancelar onSnapshot anterior
 let searchNombre      = '';
 let searchDNI         = '';
+let initialLoad       = true;
+let knownIds          = new Set();
 
 // ── Toast ──
 function showToast(msg, type = 'info') {
@@ -135,8 +139,10 @@ window.selectAsamblea = function(id) {
   document.getElementById('step-asistentes').style.display  = 'block';
   document.getElementById('btn-exportar').style.display     = 'flex';
 
-  // Resetear búsquedas
+  // Resetear búsquedas y estado del monitor
   searchNombre = ''; searchDNI = '';
+  initialLoad = true;
+  knownIds.clear();
   const sn = document.getElementById('search-nombre');
   const sd = document.getElementById('search-dni');
   if (sn) sn.value = '';
@@ -160,6 +166,30 @@ function volverAGrid() {
   document.getElementById('btn-exportar').style.display     = 'none';
 }
 
+// ── Play beep sound on new registrant ──
+function playBeep() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Nota La5 (A5)
+    gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime); // volumen bajo
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    oscillator.start();
+    setTimeout(() => {
+      oscillator.stop();
+      audioCtx.close();
+    }, 150);
+  } catch (err) {
+    console.warn('AudioContext no soportado o bloqueado:', err);
+  }
+}
+
 // ── Listener en tiempo real de asistencias ──
 function listenAsistencias(asambleaId) {
   const q = query(
@@ -168,6 +198,25 @@ function listenAsistencias(asambleaId) {
   );
 
   unsubscribe = onSnapshot(q, (snap) => {
+    const newIds = new Set(snap.docs.map(doc => doc.id));
+    
+    // Reproducir pitido si entra un asistente nuevo después de la carga inicial
+    if (!initialLoad) {
+      let hasNew = false;
+      for (const id of newIds) {
+        if (!knownIds.has(id)) {
+          hasNew = true;
+          break;
+        }
+      }
+      if (hasNew) {
+        playBeep();
+      }
+    } else {
+      initialLoad = false;
+    }
+    knownIds = newIds;
+
     asistenciasActual = [];
     snap.forEach(doc => asistenciasActual.push({ id: doc.id, ...doc.data() }));
     
@@ -205,6 +254,18 @@ function renderTabla() {
   const filtradoEl = document.getElementById('count-filtrado');
   if (totalEl)    totalEl.textContent    = asistenciasActual.length;
   if (filtradoEl) filtradoEl.textContent = data.length;
+
+  // Actualizar estadísticas del Monitor Live en Asistentes
+  const totalVal = asistenciasActual.length;
+  const presentesVal = asistenciasActual.filter(a => a.verificado === true).length;
+  const pendientesVal = asistenciasActual.filter(a => a.verificado === undefined || a.verificado === null).length;
+
+  const statsTotal = document.getElementById('stats-total');
+  const statsPresentes = document.getElementById('stats-presentes');
+  const statsPendientes = document.getElementById('stats-pendientes');
+  if (statsTotal) statsTotal.textContent = totalVal;
+  if (statsPresentes) statsPresentes.textContent = presentesVal;
+  if (statsPendientes) statsPendientes.textContent = pendientesVal;
 
   if (data.length === 0) {
     const msg = asistenciasActual.length === 0
@@ -344,6 +405,107 @@ function injectCardStyles() {
   document.head.appendChild(style);
 }
 
+// ── Modales helpers ──
+function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+
+function validateManualForm() {
+  let valid = true;
+  const nombres = document.getElementById('input-manual-nombres').value.trim();
+  const dni = document.getElementById('input-manual-dni').value.trim();
+  const celular = document.getElementById('input-manual-celular').value.trim();
+  const base = document.getElementById('input-manual-base').value.trim();
+  
+  clearManualErrors();
+  
+  if (!nombres || nombres.length < 3) {
+    showManualError('error-manual-nombres', 'Nombre completo obligatorio (mínimo 3 caracteres)');
+    valid = false;
+  }
+  
+  if (!dni) {
+    showManualError('error-manual-dni', 'El DNI es obligatorio');
+    valid = false;
+  } else if (!/^\d{8}$/.test(dni)) {
+    showManualError('error-manual-dni', 'El DNI debe tener exactamente 8 dígitos numéricos');
+    valid = false;
+  }
+  
+  if (celular && !/^\d{9,}$/.test(celular)) {
+    showManualError('error-manual-celular', 'El celular debe tener mínimo 9 dígitos numéricos');
+    valid = false;
+  }
+  
+  if (!base) {
+    showManualError('error-manual-base', 'La Base / Dirección es obligatoria');
+    valid = false;
+  }
+  
+  return valid;
+}
+
+function showManualError(id, msg) {
+  const el = document.getElementById(id);
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+  const input = el?.previousElementSibling;
+  if (input) input.classList.add('is-invalid');
+}
+
+function clearManualErrors() {
+  document.querySelectorAll('#modal-manual-reg .form-error').forEach(el => {
+    el.classList.remove('show');
+    el.previousElementSibling?.classList.remove('is-invalid');
+  });
+}
+
+async function saveManualAttendee() {
+  if (!asambleaActual) return;
+  if (!validateManualForm()) return;
+  
+  const btn = document.getElementById('btn-save-manual');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Guardando...';
+  
+  const nombres = document.getElementById('input-manual-nombres').value.trim();
+  const dni = document.getElementById('input-manual-dni').value.trim();
+  const celular = document.getElementById('input-manual-celular').value.trim();
+  const base = document.getElementById('input-manual-base').value.trim();
+  const obs = document.getElementById('input-manual-obs').value.trim();
+  
+  try {
+    // Verificar si el DNI ya está registrado en esta asamblea
+    const dup = asistenciasActual.some(a => a.dni === dni);
+    if (dup) {
+      showManualError('error-manual-dni', 'Este DNI ya se encuentra registrado en esta asamblea');
+      btn.disabled = false;
+      btn.innerHTML = 'Registrar';
+      return;
+    }
+    
+    // Guardar asistente con verificado: true (confirmado físicamente)
+    await addDoc(colAsistencias, {
+      asambleaId: asambleaActual.id,
+      nombres,
+      dni,
+      celular: celular || 'Sin teléfono',
+      baseDireccion: base,
+      observacion: obs ? obs + ' (Registro manual)' : 'Registro manual',
+      fechaRegistro: serverTimestamp(),
+      verificado: true
+    });
+    
+    showToast('Asistente registrado físicamente', 'success');
+    closeModal('modal-manual-reg');
+    document.getElementById('form-manual-reg').reset();
+  } catch (err) {
+    showToast('Error al registrar: ' + err.message, 'error');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Registrar';
+  }
+}
+
 // ── Punto de entrada ──
 requireAuth(async () => {
   setupLogout();
@@ -369,4 +531,39 @@ requireAuth(async () => {
 
   // Botón volver
   document.getElementById('btn-volver')?.addEventListener('click', volverAGrid);
+
+  // Abrir modal de registro manual
+  document.getElementById('btn-manual-reg')?.addEventListener('click', () => {
+    if (!asambleaActual) return;
+    clearManualErrors();
+    document.getElementById('form-manual-reg').reset();
+    openModal('modal-manual-reg');
+  });
+
+  // Guardar registro manual
+  document.getElementById('btn-save-manual')?.addEventListener('click', saveManualAttendee);
+
+  // Solo dígitos en DNI y Celular del modal manual
+  document.getElementById('input-manual-dni')?.addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/\D/g, '');
+  });
+  document.getElementById('input-manual-celular')?.addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/\D/g, '');
+  });
+
+  // Cerrar modales por botones data-close-modal
+  document.querySelectorAll('[data-close-modal]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      closeModal(btn.dataset.closeModal);
+    });
+  });
+
+  // Cerrar modal al hacer click en backdrop
+  document.querySelectorAll('.modal-backdrop').forEach(bd => {
+    bd.addEventListener('click', (e) => {
+      if (e.target === bd) {
+        closeModal(bd.id);
+      }
+    });
+  });
 });

@@ -117,6 +117,10 @@
               "></div>
               <div id="asamblea-selected-fecha" style="font-size:12px; color:var(--text-muted);"></div>
             </div>
+            <!-- Botón Registro Manual -->
+            <button id="btn-manual-reg" class="btn btn-primary btn-sm" style="margin-left:auto;">
+              ➕ Registrar manual
+            </button>
           </div>
 
           <div class="page-title-bar">
@@ -128,6 +132,31 @@
                   <span style="width:6px; height:6px; background:var(--success); border-radius:50%; display:inline-block; animation:pulse 1.5s infinite;"></span>
                   EN VIVO
                 </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats del Monitor en Vivo -->
+          <div class="stats-grid" id="asistentes-stats" style="margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;">
+            <div class="stat-card">
+              <div class="stat-icon navy">👥</div>
+              <div>
+                <div class="stat-value" id="stats-total">0</div>
+                <div class="stat-label">Total Registrados</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon green">✅</div>
+              <div>
+                <div class="stat-value" id="stats-presentes">0</div>
+                <div class="stat-label">Verificados (Presentes)</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon amber">⏳</div>
+              <div>
+                <div class="stat-value" id="stats-pendientes">0</div>
+                <div class="stat-label">Pendientes</div>
               </div>
             </div>
           </div>
@@ -185,6 +214,63 @@
 
       </div><!-- /page-body -->
     </main>
+  </div>
+
+  <!-- ════════════════════════════════════
+       MODAL: Registro Manual de Asistente
+  ════════════════════════════════════ -->
+  <div id="modal-manual-reg" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Registro Manual de Asistente</span>
+        <button class="modal-close" data-close-modal="modal-manual-reg">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-manual-reg" onsubmit="return false;">
+          <div class="form-group">
+            <label class="form-label" for="input-manual-nombres">
+              Nombres y Apellidos <span class="req">*</span>
+            </label>
+            <input id="input-manual-nombres" type="text" class="form-control"
+              placeholder="Ej: Juan Carlos Pérez García" maxlength="120" />
+            <div class="form-error" id="error-manual-nombres"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-manual-dni">
+              DNI <span class="req">*</span>
+            </label>
+            <input id="input-manual-dni" type="text" class="form-control"
+              placeholder="Ej: 12345678" maxlength="8" />
+            <div class="form-error" id="error-manual-dni"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-manual-celular">
+              Celular <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(Opcional)</span>
+            </label>
+            <input id="input-manual-celular" type="text" class="form-control"
+              placeholder="Ej: 987654321" maxlength="12" />
+            <div class="form-error" id="error-manual-celular"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-manual-base">
+              Base / Dirección <span class="req">*</span>
+            </label>
+            <input id="input-manual-base" type="text" class="form-control"
+              placeholder="Ej: Distrito Centro" maxlength="150" />
+            <div class="form-error" id="error-manual-base"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-manual-obs">Observación</label>
+            <textarea id="input-manual-obs" class="form-control"
+              placeholder="Ej: Adulto mayor, sin teléfono" maxlength="200" style="resize: vertical; min-height: 80px;"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close-modal="modal-manual-reg">Cancelar</button>
+        <button id="btn-save-manual" class="btn btn-primary">Registrar</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="js/asistencia.js"></script>

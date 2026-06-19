@@ -208,8 +208,11 @@ function updateGeoStatus(state, extraInfo = {}) {
   }
 }
 
+let isGeoValid = false;
+
 function checkAttendeeLocation(asamblea) {
   updateGeoStatus('checking');
+  isGeoValid = false;
   
   navigator.geolocation.getCurrentPosition(
     (position) => {
@@ -219,12 +222,15 @@ function checkAttendeeLocation(asamblea) {
       const distance = getDistance(uLat, uLng, asamblea.latitud, asamblea.longitud);
       
       if (distance <= asamblea.radioPermitido) {
+        isGeoValid = true;
         updateGeoStatus('valid', { distance });
       } else {
+        isGeoValid = false;
         updateGeoStatus('invalid', { distance, allowed: asamblea.radioPermitido });
       }
     },
     (error) => {
+      isGeoValid = false;
       let errMsg = 'Por favor activa el GPS y otorga permisos de ubicación en tu navegador para continuar.';
       if (error.code === error.PERMISSION_DENIED) {
         errMsg = 'Permiso de geolocalización denegado. Habilita el acceso GPS para este sitio.';
@@ -250,6 +256,15 @@ async function initRegistro() {
 
   if (!asambleaId) {
     showErrorScreen('Asamblea no encontrada', 'No se proporcionó un ID de asamblea. Escanea el código QR correcto.');
+    return;
+  }
+
+  // Control de registro único por dispositivo (localStorage)
+  if (localStorage.getItem('asistencia_registrada_' + asambleaId) === 'true') {
+    showErrorScreen(
+      'Asistencia ya registrada',
+      'Ya has registrado tu asistencia para esta asamblea en este dispositivo. No se permiten registros múltiples.'
+    );
     return;
   }
 
@@ -293,7 +308,9 @@ async function initRegistro() {
     if (asambleaBadgeEl) asambleaBadgeEl.style.display = 'block';
 
     // Validar ubicación geográfica si está configurada
-    const hasGeo = asamblea.latitud !== undefined && asamblea.longitud !== undefined && asamblea.radioPermitido !== undefined;
+    const hasGeo = typeof asamblea.latitud === 'number' && 
+                   typeof asamblea.longitud === 'number' && 
+                   typeof asamblea.radioPermitido === 'number';
     if (hasGeo) {
       checkAttendeeLocation(asamblea);
       
@@ -314,6 +331,17 @@ async function initRegistro() {
     // Envío del formulario
     document.getElementById('form-registro')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // Validar ubicación geográfica antes del envío si está activa
+      if (hasGeo && !isGeoValid) {
+        const genErr = document.getElementById('form-general-error');
+        if (genErr) {
+          genErr.textContent = 'No puedes registrar tu asistencia porque te encuentras fuera del rango permitido o tu ubicación no ha sido validada.';
+          genErr.style.display = 'block';
+        }
+        return;
+      }
+
       const data = {
         nombres:       document.getElementById('input-nombres').value.trim(),
         dni:           document.getElementById('input-dni').value.trim(),
@@ -342,6 +370,9 @@ async function initRegistro() {
           observacion:   data.observacion,
           fechaRegistro: serverTimestamp()
         });
+
+        // Registrar bandera en localStorage para prevenir envíos múltiples desde este dispositivo
+        localStorage.setItem('asistencia_registrada_' + asambleaId, 'true');
 
         showSuccessScreen(data.nombres);
       } catch (err) {

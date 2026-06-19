@@ -434,8 +434,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
 /* ══════════════════════════════════════════
    TABLE
-══════════════════════════════════════════ */
-.table-wrapper { overflow-x: auto; }
+   ══════════════════════════════════════════ */
+.table-wrapper { overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; }
 table.data-table {
   width: 100%;
   border-collapse: collapse;
@@ -783,7 +783,7 @@ table.data-table {
   padding: 5px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
-.registro-banner-text { position: relative; z-index: 1; }
+.registro-banner-text { position: relative; z-index: 1; flex: 1; min-width: 0; }
 .registro-banner-title { font-size: 20px; font-weight: 800; color: #fff; }
 .registro-banner-sub   { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 2px; }
 .registro-red-bar {
@@ -1294,8 +1294,11 @@ table.data-table {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 580px) {
   .stats-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
   #toast-container { left: 16px; right: 16px; bottom: 16px; }
   .toast { min-width: unset; max-width: 100%; }
   .page-title { font-size: 18px; }
