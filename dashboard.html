@@ -85,16 +85,16 @@
       <div class="page-body">
 
         <!-- Welcome Banner -->
-        <div style="background:linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%); border-radius:var(--radius-lg); padding:24px 28px; margin-bottom:28px; display:flex; align-items:center; gap:20px; box-shadow:var(--shadow-navy); overflow:hidden; position:relative;">
-          <div style="position:absolute; right:-20px; top:-20px; width:160px; height:160px; border-radius:50%; border:40px solid rgba(255,255,255,0.06);"></div>
-        <div style="background:#fff; border-radius:12px; padding:8px 12px; flex-shrink:0; position:relative; z-index:1; box-shadow:0 4px 16px rgba(0,0,0,0.2);">
-          <img src="images/logo.jpg" alt="MR26" style="width:60px; height:auto; object-fit:contain; display:block;" />
-        </div>
-          <div style="position:relative; z-index:1;">
-            <div style="font-size:20px; font-weight:800; color:#fff;">¡Bienvenido al Sistema de Asambleas!</div>
-            <div style="font-size:13px; color:rgba(255,255,255,0.7); margin-top:4px;">Mario Ruiz Gobernador Regional · Gestiona asambleas, genera QR y registra asistentes.</div>
+        <div class="welcome-banner">
+          <div class="welcome-decor"></div>
+          <div class="welcome-logo-wrap">
+            <img src="images/logo.jpg" alt="MR26" />
           </div>
-          <div style="margin-left:auto; position:relative; z-index:1;">
+          <div class="welcome-text">
+            <div class="welcome-title">¡Bienvenido al Sistema de Asambleas!</div>
+            <div class="welcome-sub">Mario Ruiz Gobernador Regional · Gestiona asambleas, genera QR y registra asistentes.</div>
+          </div>
+          <div class="welcome-action">
             <a href="asambleas.html" class="btn btn-red">➕ Nueva asamblea</a>
           </div>
         </div>

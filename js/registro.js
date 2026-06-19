@@ -123,6 +123,126 @@ function setLoading(loading) {
     : '✅ Registrar asistencia';
 }
 
+// ── Helpers de Geolocalización y Control de Formulario ──
+function setFormDisabled(disabled) {
+  const inputs = ['input-nombres', 'input-dni', 'input-celular', 'input-base', 'input-obs'];
+  inputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+  const btn = document.getElementById('btn-registrar');
+  if (btn) btn.disabled = disabled;
+  
+  const formInner = document.getElementById('registro-form-inner');
+  if (formInner) {
+    formInner.style.opacity = disabled ? '0.5' : '1';
+    formInner.style.pointerEvents = disabled ? 'none' : 'auto';
+  }
+}
+
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Radio de la Tierra en metros
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c; // metros
+}
+
+function updateGeoStatus(state, extraInfo = {}) {
+  const banner = document.getElementById('geo-status-banner');
+  const icon = document.getElementById('geo-status-icon');
+  const text = document.getElementById('geo-status-text');
+  const retryContainer = document.getElementById('geo-retry-container');
+  
+  if (!banner) return;
+  
+  banner.style.display = 'flex';
+  retryContainer.style.display = 'none';
+  
+  // Reset styles
+  banner.style.background = '';
+  banner.style.border = '';
+  banner.style.color = '';
+  
+  switch(state) {
+    case 'checking':
+      banner.style.background = 'var(--navy-soft)';
+      banner.style.border = '1.5px solid var(--navy)';
+      banner.style.color = 'var(--navy)';
+      icon.textContent = '📡';
+      text.textContent = 'Validando tu ubicación GPS para habilitar el registro...';
+      setFormDisabled(true);
+      break;
+      
+    case 'valid':
+      banner.style.background = 'var(--success-soft)';
+      banner.style.border = '1.5px solid var(--success)';
+      banner.style.color = 'var(--success)';
+      icon.textContent = '✅';
+      text.innerHTML = `<strong>Ubicación validada:</strong> Estás dentro del rango permitido (a ${extraInfo.distance.toFixed(0)} metros de la asamblea).`;
+      setFormDisabled(false);
+      break;
+      
+    case 'invalid':
+      banner.style.background = 'var(--red-soft)';
+      banner.style.border = '1.5px dashed var(--red)';
+      banner.style.color = 'var(--navy)';
+      icon.textContent = '❌';
+      text.innerHTML = `<strong style="color:var(--red);">Ubicación fuera de rango:</strong> Te encuentras a <u>${extraInfo.distance.toFixed(0)} metros</u> del local. El máximo permitido es <u>${extraInfo.allowed} metros</u>. El formulario de registro está bloqueado.`;
+      setFormDisabled(true);
+      break;
+      
+    case 'error':
+      banner.style.background = 'var(--warning-soft)';
+      banner.style.border = '1.5px dashed var(--warning)';
+      banner.style.color = 'var(--navy)';
+      icon.textContent = '⚠️';
+      text.innerHTML = `<strong style="color:var(--warning);">Acceso a ubicación requerido:</strong> ${extraInfo.message || 'No se pudo obtener tu ubicación actual.'}`;
+      retryContainer.style.display = 'block';
+      setFormDisabled(true);
+      break;
+  }
+}
+
+function checkAttendeeLocation(asamblea) {
+  updateGeoStatus('checking');
+  
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const uLat = position.coords.latitude;
+      const uLng = position.coords.longitude;
+      
+      const distance = getDistance(uLat, uLng, asamblea.latitud, asamblea.longitud);
+      
+      if (distance <= asamblea.radioPermitido) {
+        updateGeoStatus('valid', { distance });
+      } else {
+        updateGeoStatus('invalid', { distance, allowed: asamblea.radioPermitido });
+      }
+    },
+    (error) => {
+      let errMsg = 'Por favor activa el GPS y otorga permisos de ubicación en tu navegador para continuar.';
+      if (error.code === error.PERMISSION_DENIED) {
+        errMsg = 'Permiso de geolocalización denegado. Habilita el acceso GPS para este sitio.';
+      } else if (error.code === error.POSITION_UNAVAILABLE) {
+        errMsg = 'Ubicación no disponible. Asegúrate de tener buena señal de GPS.';
+      } else if (error.code === error.TIMEOUT) {
+        errMsg = 'Tiempo de espera agotado al obtener ubicación.';
+      }
+      updateGeoStatus('error', { message: errMsg });
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
+}
+
 // ── Principal ──
 async function initRegistro() {
   const params = new URLSearchParams(window.location.search);
@@ -158,11 +278,30 @@ async function initRegistro() {
       const [y, m, d] = asamblea.fecha.split('-');
       fechaEl.textContent = `📅 ${d}/${m}/${y}`;
     }
+
+    // Mostrar dirección si existe
+    const direccionEl = document.getElementById('asamblea-direccion');
+    if (direccionEl && asamblea.direccion) {
+      direccionEl.textContent = `📍 Dirección: ${asamblea.direccion}`;
+      direccionEl.style.display = 'block';
+    }
+
     document.title = `Registro — ${asamblea.nombre}`;
 
     hideLoader();
     if (formStateEl) formStateEl.style.display = 'block';
     if (asambleaBadgeEl) asambleaBadgeEl.style.display = 'block';
+
+    // Validar ubicación geográfica si está configurada
+    const hasGeo = asamblea.latitud !== undefined && asamblea.longitud !== undefined && asamblea.radioPermitido !== undefined;
+    if (hasGeo) {
+      checkAttendeeLocation(asamblea);
+      
+      // Conectar botón de reintento
+      document.getElementById('btn-geo-retry')?.addEventListener('click', () => {
+        checkAttendeeLocation(asamblea);
+      });
+    }
 
     // Solo dígitos en DNI y Celular
     document.getElementById('input-dni')?.addEventListener('input', e => {
@@ -222,17 +361,6 @@ async function initRegistro() {
     showErrorScreen('Error de conexión', 'No se pudo conectar. Verifica tu internet e intenta nuevamente.');
   }
 }
-
-// ── Botón "registrar otro" ──
-document.getElementById('btn-otro')?.addEventListener('click', () => {
-  if (successStateEl) {
-    successStateEl.style.display = 'none';
-    successStateEl.classList.remove('show');
-  }
-  if (formInnerEl) formInnerEl.style.display = 'block';
-  document.getElementById('form-registro')?.reset();
-  clearAllErrors();
-});
 
 // ── Inicializar ──
 initRegistro();

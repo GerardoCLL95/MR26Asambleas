@@ -39,6 +39,10 @@ const colAsambleas = collection(db, 'asambleas');
 // ── Estado local ──
 let asambleas = [];
 let editingId  = null;
+let map = null;
+let marker = null;
+let circle = null;
+let currentAddress = '';
 
 // ── Toast ──
 function showToast(msg, type = 'info') {
@@ -178,6 +182,13 @@ window.editAsamblea = function(id) {
   document.getElementById('input-estado').value = a.estado || 'activa';
   clearErrors();
   openModal('modal-form');
+  
+  // Cargar ubicación de la asamblea o coordenadas por defecto (Tacna, Perú)
+  const lat = a.latitud !== undefined ? Number(a.latitud) : -18.0137;
+  const lng = a.longitud !== undefined ? Number(a.longitud) : -70.2511;
+  const radio = a.radioPermitido !== undefined ? Number(a.radioPermitido) : 100;
+  const direccion = a.direccion || '';
+  setupMapForAssembly(lat, lng, radio, direccion);
 };
 
 // ── Toggle estado ──
@@ -255,10 +266,41 @@ function validateForm() {
   let valid = true;
   const nombre = document.getElementById('input-nombre').value.trim();
   const fecha  = document.getElementById('input-fecha').value.trim();
+  const latStr = document.getElementById('input-latitud').value.trim();
+  const lngStr = document.getElementById('input-longitud').value.trim();
+  const radioStr = document.getElementById('input-radio').value.trim();
 
   clearErrors();
   if (!nombre) { showError('error-nombre', 'El nombre es obligatorio'); valid = false; }
   if (!fecha)  { showError('error-fecha',  'La fecha es obligatoria');  valid = false; }
+  
+  const lat = parseFloat(latStr);
+  if (latStr === '') {
+    showError('error-latitud', 'La latitud es obligatoria');
+    valid = false;
+  } else if (isNaN(lat) || lat < -90 || lat > 90) {
+    showError('error-latitud', 'Latitud inválida (-90 a 90)');
+    valid = false;
+  }
+  
+  const lng = parseFloat(lngStr);
+  if (lngStr === '') {
+    showError('error-longitud', 'La longitud es obligatoria');
+    valid = false;
+  } else if (isNaN(lng) || lng < -180 || lng > 180) {
+    showError('error-longitud', 'Longitud inválida (-180 a 180)');
+    valid = false;
+  }
+  
+  const radio = parseFloat(radioStr);
+  if (radioStr === '') {
+    showError('error-radio', 'El radio es obligatorio');
+    valid = false;
+  } else if (isNaN(radio) || radio <= 0) {
+    showError('error-radio', 'El radio debe ser un número positivo');
+    valid = false;
+  }
+  
   return valid;
 }
 function showError(id, msg) {
@@ -274,6 +316,218 @@ function clearErrors() {
   });
 }
 
+// ── Funciones de Mapa (Leaflet) ──
+function initMap() {
+  if (map) return;
+  
+  const defaultIcon = L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+  });
+  
+  map = L.map('map-asamblea').setView([-18.0137, -70.2511], 15);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+  
+  marker = L.marker([-18.0137, -70.2511], { icon: defaultIcon, draggable: true }).addTo(map);
+  
+  circle = L.circle([-18.0137, -70.2511], {
+    color: 'var(--red)',
+    fillColor: 'var(--red-soft2)',
+    fillOpacity: 0.35,
+    radius: 100
+  }).addTo(map);
+  
+  // Evento al hacer clic en el mapa
+  map.on('click', (e) => {
+    updateMarkerPosition(e.latlng.lat, e.latlng.lng);
+  });
+  
+  // Evento al arrastrar el marcador
+  marker.on('dragend', () => {
+    const latlng = marker.getLatLng();
+    updateMarkerPosition(latlng.lat, latlng.lng);
+  });
+  
+  // Sincronizar inputs manuales
+  document.getElementById('input-latitud')?.addEventListener('input', syncMapFromInputs);
+  document.getElementById('input-longitud')?.addEventListener('input', syncMapFromInputs);
+  document.getElementById('input-radio')?.addEventListener('input', syncCircleRadius);
+  
+  // Configurar botón GPS
+  setupGPSButton();
+}
+
+async function fetchAddress(lat, lng) {
+  const infoAddr = document.getElementById('info-direccion');
+  if (infoAddr) {
+    infoAddr.textContent = 'Obteniendo dirección aproximada...';
+  }
+  
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
+      headers: {
+        'Accept-Language': 'es'
+      }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      currentAddress = data.display_name || '';
+      updateAddressDisplay(currentAddress);
+    } else {
+      updateAddressDisplay('Dirección no disponible');
+    }
+  } catch (err) {
+    console.error('Error al obtener dirección:', err);
+    updateAddressDisplay('Error al obtener dirección');
+  }
+}
+
+function updateAddressDisplay(address) {
+  const infoAddr = document.getElementById('info-direccion');
+  if (infoAddr) {
+    infoAddr.textContent = address || 'No encontrada';
+  }
+  
+  if (marker) {
+    marker.bindPopup(`<b>Dirección:</b><br>${address || 'Ubicación de la asamblea'}`).openPopup();
+  }
+}
+
+function updateMarkerPosition(lat, lng) {
+  lat = parseFloat(lat);
+  lng = parseFloat(lng);
+  if (isNaN(lat) || isNaN(lng)) return;
+  
+  document.getElementById('input-latitud').value = lat.toFixed(6);
+  document.getElementById('input-longitud').value = lng.toFixed(6);
+  
+  marker.setLatLng([lat, lng]);
+  circle.setLatLng([lat, lng]);
+  
+  document.getElementById('info-latitud').textContent = lat.toFixed(6);
+  document.getElementById('info-longitud').textContent = lng.toFixed(6);
+  
+  // Buscar dirección correspondiente
+  fetchAddress(lat, lng);
+}
+
+function syncMapFromInputs() {
+  const latVal = document.getElementById('input-latitud').value;
+  const lngVal = document.getElementById('input-longitud').value;
+  const lat = parseFloat(latVal);
+  const lng = parseFloat(lngVal);
+  
+  if (!isNaN(lat) && !isNaN(lng)) {
+    marker.setLatLng([lat, lng]);
+    circle.setLatLng([lat, lng]);
+    map.panTo([lat, lng]);
+    document.getElementById('info-latitud').textContent = lat.toFixed(6);
+    document.getElementById('info-longitud').textContent = lng.toFixed(6);
+    fetchAddress(lat, lng);
+  } else {
+    document.getElementById('info-latitud').textContent = latVal ? 'Inválido' : '-';
+    document.getElementById('info-longitud').textContent = lngVal ? 'Inválido' : '-';
+  }
+}
+
+function syncCircleRadius() {
+  const rStr = document.getElementById('input-radio').value;
+  const r = parseFloat(rStr);
+  if (!isNaN(r) && r > 0) {
+    circle.setRadius(r);
+    document.getElementById('info-radio').textContent = rStr;
+  } else {
+    circle.setRadius(0);
+    document.getElementById('info-radio').textContent = '-';
+  }
+}
+
+function setupGPSButton() {
+  document.getElementById('btn-gps')?.addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      showToast('Tu navegador no soporta geolocalización', 'error');
+      return;
+    }
+    
+    const gpsBtn = document.getElementById('btn-gps');
+    const originalText = gpsBtn.innerHTML;
+    gpsBtn.disabled = true;
+    gpsBtn.innerHTML = '⌛ Obteniendo ubicación...';
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        
+        updateMarkerPosition(lat, lng);
+        map.setView([lat, lng], 16);
+        
+        gpsBtn.disabled = false;
+        gpsBtn.innerHTML = originalText;
+        showToast('Ubicación obtenida con éxito', 'success');
+      },
+      (error) => {
+        gpsBtn.disabled = false;
+        gpsBtn.innerHTML = originalText;
+        let errMsg = 'No se pudo obtener tu ubicación';
+        if (error.code === error.PERMISSION_DENIED) {
+          errMsg = 'Permiso de geolocalización denegado';
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          errMsg = 'Ubicación no disponible';
+        } else if (error.code === error.TIMEOUT) {
+          errMsg = 'Tiempo de espera agotado al obtener ubicación';
+        }
+        showToast(errMsg, 'error');
+        console.error('Error GPS:', error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 0
+      }
+    );
+  });
+}
+
+function setupMapForAssembly(lat, lng, radio, direccion = '') {
+  initMap();
+  
+  document.getElementById('input-latitud').value = lat;
+  document.getElementById('input-longitud').value = lng;
+  document.getElementById('input-radio').value = radio;
+  
+  currentAddress = direccion;
+  
+  setTimeout(() => {
+    if (map) {
+      map.invalidateSize();
+      
+      document.getElementById('input-latitud').value = lat.toFixed(6);
+      document.getElementById('input-longitud').value = lng.toFixed(6);
+      marker.setLatLng([lat, lng]);
+      circle.setLatLng([lat, lng]);
+      document.getElementById('info-latitud').textContent = lat.toFixed(6);
+      document.getElementById('info-longitud').textContent = lng.toFixed(6);
+      
+      syncCircleRadius();
+      map.setView([lat, lng], 15);
+      
+      if (currentAddress) {
+        updateAddressDisplay(currentAddress);
+      } else {
+        fetchAddress(lat, lng);
+      }
+    }
+  }, 100);
+}
+
 // ── Guardar asamblea (crear o editar) ──
 async function saveAsamblea() {
   if (!validateForm()) return;
@@ -282,13 +536,29 @@ async function saveAsamblea() {
   const nombre = document.getElementById('input-nombre').value.trim();
   const fecha  = document.getElementById('input-fecha').value.trim();
   const estado = document.getElementById('input-estado').value;
+  const lat    = parseFloat(document.getElementById('input-latitud').value);
+  const lng    = parseFloat(document.getElementById('input-longitud').value);
+  const radio  = parseFloat(document.getElementById('input-radio').value);
 
   try {
+    const dataToSave = {
+      nombre,
+      fecha,
+      estado,
+      latitud: lat,
+      longitud: lng,
+      radioPermitido: radio,
+      direccion: currentAddress
+    };
+    
     if (editingId) {
-      await updateDoc(doc(db, 'asambleas', editingId), { nombre, fecha, estado });
+      await updateDoc(doc(db, 'asambleas', editingId), dataToSave);
       showToast('Asamblea actualizada', 'success');
     } else {
-      await addDoc(colAsambleas, { nombre, fecha, estado, createdAt: serverTimestamp() });
+      await addDoc(colAsambleas, {
+        ...dataToSave,
+        createdAt: serverTimestamp()
+      });
       showToast('Asamblea creada', 'success');
     }
     closeModal('modal-form');
@@ -323,6 +593,8 @@ requireAuth(() => {
     document.getElementById('form-asamblea').reset();
     clearErrors();
     openModal('modal-form');
+    // Cargar ubicación por defecto (Tacna, Perú)
+    setupMapForAssembly(-18.0137, -70.2511, 100, '');
   });
 
   // Guardar asamblea

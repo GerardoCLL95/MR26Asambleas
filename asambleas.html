@@ -8,6 +8,9 @@
   <link rel="stylesheet" href="css/styles.css" />
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body>
 
@@ -135,6 +138,46 @@
               <option value="activa">✅ Activa</option>
               <option value="inactiva">⏸️ Inactiva</option>
             </select>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 15px;">
+            <div class="form-group">
+              <label class="form-label" for="input-latitud">
+                Latitud <span class="req">*</span>
+              </label>
+              <input id="input-latitud" type="number" step="any" class="form-control" placeholder="Ej: -18.0137" />
+              <div class="form-error" id="error-latitud"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="input-longitud">
+                Longitud <span class="req">*</span>
+              </label>
+              <input id="input-longitud" type="number" step="any" class="form-control" placeholder="Ej: -70.2511" />
+              <div class="form-error" id="error-longitud"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-radio">
+              Radio permitido (metros) <span class="req">*</span>
+            </label>
+            <input id="input-radio" type="number" min="1" class="form-control" placeholder="Ej: 100" />
+            <div class="form-error" id="error-radio"></div>
+          </div>
+          
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <span class="form-label" style="margin-bottom: 0;">Ubicación en el mapa</span>
+            <button id="btn-gps" type="button" class="btn btn-outline btn-xs" style="padding: 6px 10px;">
+              📍 Usar mi ubicación actual
+            </button>
+          </div>
+          
+          <div id="map-asamblea" style="height: 250px; border-radius: var(--radius); margin-bottom: 15px; border: 1.5px solid var(--border); position: relative; z-index: 1;"></div>
+          
+          <!-- Detalle debajo del mapa -->
+          <div id="map-info" style="background: var(--navy-soft); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; font-size: 12.5px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 4px;">
+            <div><strong>Latitud seleccionada:</strong> <span id="info-latitud">-</span></div>
+            <div><strong>Longitud seleccionada:</strong> <span id="info-longitud">-</span></div>
+            <div><strong>Radio configurado:</strong> <span id="info-radio">-</span> metros</div>
+            <div><strong>Dirección aproximada:</strong> <span id="info-direccion">-</span></div>
           </div>
         </form>
       </div>
